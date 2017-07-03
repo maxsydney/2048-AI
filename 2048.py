@@ -10,10 +10,7 @@ class Game(object):
     def __init__(self):
         self.browser = webdriver.Firefox()
         self.browser.get("https://gabrielecirulli.github.io/2048/")
-        self.state = np.array([[0, 0, 0, 0],
-                               [0, 0, 0, 0],
-                               [0, 0, 0, 0],
-                               [0, 0, 0, 0]])
+        self.state = np.zeros((4, 4))
 
     def play(self):
         '''
@@ -23,7 +20,7 @@ class Game(object):
         move = self.calculate_move()
         t2 = time.time()
         print('Search took {:.2f} seconds'.format(t2-t1))
-        print('Executing {} move'.format(move))
+        print('Executing {} move'.format(move), flush=True)
         self.execute_move(move)
 
     def execute_move(self, move):
@@ -39,7 +36,7 @@ class Game(object):
         '''
         Examines game current game state and returns it as a numpy array
         '''
-
+        self.state = np.zeros((4, 4))
         elem = self.browser.find_element_by_class_name("tile-container")
         tiles = elem.find_elements_by_class_name("tile")
         active_tiles = [tile.get_attribute("class") for tile in tiles]
@@ -57,12 +54,28 @@ class Game(object):
         move = ai.search()
         return move
 
+    def over(self):
+        '''
+        This function requires some work. Calls to game tree functions will not work
+        '''
+        if len(np.argwhere(self.state == 0)) == 0:
+            up_state = minimax.Game_tree.explore_vertical_move(1, self.state, 'up')
+            down_state = minimax.Game_tree.explore_vertical_move(1, self.state, 'down')
+            right_state = minimax.Game_tree.explore_horizontal_move(1, self.state, 'right')
+
+            if ((self.state == up_state) == (down_state == right_state)).all():
+                return True
+        return False
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
 
 game = Game()
 
-for i in range(20):
+while not game.over():
+    time.sleep(0.02)
     game.read_state()
+    print(game.state)
     game.play()

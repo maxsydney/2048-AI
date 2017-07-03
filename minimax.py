@@ -2,6 +2,9 @@ import numpy as np
 import time
 
 class Game_tree(object):
+    '''
+    Constructs and stores the tree of possible game states for the online game 2048
+    '''
 
     def __init__(self, depth, state, player=1, move=None):
         self.depth = depth
@@ -13,6 +16,9 @@ class Game_tree(object):
         self.build_game_tree(self.player)
 
     def build_game_tree(self, player):
+        '''
+        Recursively construct the tree of possible game states
+        '''
         if self.depth >= 0:
             if player == -1:
                 zero_indices = np.argwhere(self.state == 0)
@@ -23,12 +29,22 @@ class Game_tree(object):
             else:
                 moves = ('right', 'down', 'up')
                 for move in moves:
-                    if move in ('right', 'left'):
+                    valid = self.is_valid(move)
+                    if move in ('right', 'left') and valid:
                         new_state = self.explore_horizontal_move(self.state, move)
                         self.children.append(Game_tree(self.depth-1, new_state, self.player*-1, move))
-                    elif move in ('up', 'down'):
+                    elif move in ('up', 'down') and valid:
                         new_state = self.explore_vertical_move(self.state, move)
                         self.children.append(Game_tree(self.depth-1, new_state, self.player*-1, move))
+
+    def is_valid(self, move):
+        if move in ('left', 'right'):
+            new_state = self.explore_horizontal_move(self.state, move)
+        else:
+            new_state = self.explore_vertical_move(self.state, move)
+        if np.array_equal(self.state, new_state):
+            return False
+        return True
 
     def explore_horizontal_move(self, state, direction):
         '''
@@ -120,14 +136,20 @@ class Game_tree(object):
         return False
 
 class Minimax(object):
-
+    '''
+    Applies a minimax search to the game tree
+    '''
     def __init__(self, game_tree):
         self.game_tree = game_tree
 
     def search(self):
+        '''
+        Minimax search
+        '''
         best_val = self.max_value(self.game_tree)
         best_move = None
         for child in self.game_tree.children:
+            #print('Move {} has a score of {}'.format(child.move, child.score), flush=True)
             if child.score == best_val:
                 best_move = child.move
                 break
@@ -140,8 +162,10 @@ class Minimax(object):
         infinity = float('inf')
         max_val = -infinity
 
+        #print('Executing max search, values are')
         for child in node.children:
             max_val = max(max_val, self.min_value(child))
+           # print(max_val, flush=True)
         node.score = max_val
         return max_val
 
@@ -159,6 +183,7 @@ class Minimax(object):
 
     def get_score(self, node):
         score = np.amax(node.state)
+        #score = np.sum(node.state)
         node.score = score
         return score
 
@@ -170,14 +195,11 @@ if __name__ == '__main__':
                   [2, 0, 2, 2],
                   [0, 4, 0, 2]])
 
-    d = 4
+    d = 2
     start = time.time()
     n = Game_tree(d, s, 1)
     end = time.time()
 
     print("Simulated {} layers in {:.2f}s".format(d, end-start))
-    while len(n.children) != 0:
-        n = n.children[0]
-
-    print(n.state)
+    print(len(n.children[1].children[0].children))
 
