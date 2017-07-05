@@ -1,5 +1,6 @@
 import numpy as np 
 import time
+import math
 
 class Game_tree(object):
     '''
@@ -13,6 +14,9 @@ class Game_tree(object):
         self.children = []
         self.score = None
         self.move = move
+        self.over = False
+        if np.count_nonzero(state) == 16:
+            self.over = self.check_game_over()
         self.build_game_tree(self.player)
 
     def build_game_tree(self, player):
@@ -134,6 +138,15 @@ class Game_tree(object):
                     if row[index+1] == cell:
                         return True
         return False
+    
+    def check_game_over(self):
+        up_state = self.explore_vertical_move(self.state, 'up')
+        down_state = self.explore_vertical_move(self.state, 'down')
+        right_state = self.explore_horizontal_move(self.state, 'right')
+
+        if ((self.state == up_state) == (down_state == right_state)).all():
+            return True
+        return False
 
 class Minimax(object):
     '''
@@ -164,42 +177,78 @@ class Minimax(object):
 
         #print('Executing max search, values are')
         for child in node.children:
-            max_val = max(max_val, self.min_value(child))
+            #max_val = max(max_val, self.min_value(child))
+            max_val = max(max_val, self.expecti(child))
            # print(max_val, flush=True)
         node.score = max_val
         return max_val
 
     def min_value(self, node):
+        '''
+        Minimiser for minimax algorithm
+        '''
         if len(node.children) == 0:
             return self.get_score(node)
 
         infinity = float('inf')
         min_val = infinity
-
         for child in node.children:
             min_val = min(min_val, self.max_value(child))
         node.score = min_val
         return min_val
+    
+    def expecti(self, node):
+        '''
+        Minimiser for minimax algorithm
+        '''
+        if len(node.children) == 0:
+            return self.get_score(node)
+
+        child_values = []
+        for child in node.children:
+            child_values.append(self.max_value(child))
+        expected_val = sum(child_values) / len(child_values)
+        node.score = expected_val
+        return expected_val
+
 
     def get_score(self, node):
-        score = np.amax(node.state)
-        #score = np.sum(node.state)
-        node.score = score
+        '''
+        Main game heuristic. Reward snake structure and having largest tile in bottom right
+        '''
+        snake = []
+        for i, row in enumerate(np.transpose(node.state)):
+            snake.extend(reversed(row) if i % 2 == 0 else row)
+        snake = snake[::-1]
+        m = np.amax(node.state)
+        score = sum(val/10 ** index for index, val in enumerate(snake)) \
+        - math.pow((node.state[3][3] != m)*abs(node.state[3][3] - m), 2)
         return score
 
 
 
 if __name__ == '__main__':
-    s = np.array([[4, 0, 2, 4],
-                  [2, 4, 0, 2],
-                  [2, 0, 2, 2],
-                  [0, 4, 0, 2]])
+    '''
+    Mainly debugging code. Not called when minimax imported to controller
+    '''
+    s = np.array([[0, 0, 0, 2],
+                  [0, 0, 2, 8],
+                  [0, 0, 4, 2],
+                  [0, 0, 8, 32]])
+    t1 = time.time()
+    n = Game_tree(5, s)
+    t2 = time.time()
+    print("Built tree in {:.2f} seconds".format(t2 - t1))
+    m = Minimax(n)
+    t1 = time.time()
+    m.search()
+    t2 = time.time()
+    print("Executed search in {:.2f} seconds".format(t2 - t1))
+    # d = 2
+    # start = time.time()
+    # n = Game_tree(d, s, 1)
+    # end = time.time()
 
-    d = 2
-    start = time.time()
-    n = Game_tree(d, s, 1)
-    end = time.time()
-
-    print("Simulated {} layers in {:.2f}s".format(d, end-start))
-    print(len(n.children[1].children[0].children))
+    # print("Simulated {} layers in {:.2f}s".format(d, end-start))
+    # print(len(n.children[1].children[0].children))
 

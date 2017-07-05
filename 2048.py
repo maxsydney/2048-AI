@@ -11,6 +11,7 @@ class Game(object):
         self.browser = webdriver.Firefox()
         self.browser.get("https://gabrielecirulli.github.io/2048/")
         self.state = np.zeros((4, 4))
+        self.over = False
 
     def play(self):
         '''
@@ -49,24 +50,16 @@ class Game(object):
             self.state[int(row)-1][int(col)-1] = int(value)
 
     def calculate_move(self, depth=4):
+        '''
+        Increase accuracy by using adaptive depth search. Initially searches take a long time due to the 
+        high branching factor of an empty board, but quickly become much faster as board fills up. Search
+        deeper as board becomes more populated for greater results
+        '''
         game_tree = minimax.Game_tree(depth, self.state)
+        self.over = game_tree.over
         ai = minimax.Minimax(game_tree)
         move = ai.search()
         return move
-
-    def over(self):
-        '''
-        This function requires some work. Calls to game tree functions will not work
-        '''
-        if len(np.argwhere(self.state == 0)) == 0:
-            up_state = minimax.Game_tree.explore_vertical_move(1, self.state, 'up')
-            down_state = minimax.Game_tree.explore_vertical_move(1, self.state, 'down')
-            right_state = minimax.Game_tree.explore_horizontal_move(1, self.state, 'right')
-
-            if ((self.state == up_state) == (down_state == right_state)).all():
-                return True
-        return False
-
 
 if __name__ == "__main__":
     import doctest
@@ -74,8 +67,10 @@ if __name__ == "__main__":
 
 game = Game()
 
-while not game.over():
+while not game.over:
     time.sleep(0.02)
     game.read_state()
     print(game.state)
     game.play()
+
+print("Game over")
